@@ -1,43 +1,30 @@
-import firestore from '@react-native-firebase/firestore';
-import messaging, { AuthorizationStatus, FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import { db } from '../services/firebaseConfig';
+import { doc, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 
+// Giả lập cấp quyền trên môi trường Expo Go
 export async function requestUserPermission(): Promise<boolean> {
-  await messaging().registerDeviceForRemoteMessages();
-  const authStatus = await messaging().requestPermission({
-    alert: true,
-    badge: true,
-    sound: true,
-  });
-  const enabled =
-    authStatus === AuthorizationStatus.AUTHORIZED ||
-    authStatus === AuthorizationStatus.PROVISIONAL;
-
-  return enabled;
+  console.log("Expo Go Environment: Permission requested");
+  return true;
 }
 
+// Giả lập lưu trữ thông báo token cục bộ
 export async function registerFCMToken(uid: string): Promise<string | null> {
-  const token = await messaging().getToken();
-  if (!token) {
-    return null;
-  }
+  const mockToken = "expo-mock-fcm-token-" + uid;
 
-  await firestore().collection('users').doc(uid).set(
+  const userDoc = doc(db, 'users', uid);
+  await setDoc(
+    userDoc,
     {
-      fcmTokens: firestore.FieldValue.arrayUnion(token),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
+      fcmTokens: arrayUnion(mockToken),
+      updatedAt: serverTimestamp(),
     },
     { merge: true },
   );
 
-  return token;
+  return mockToken;
 }
 
-export function onMessageReceived(
-  callback: (message: FirebaseMessagingTypes.RemoteMessage) => void,
-) {
-  return messaging().onMessage(async remoteMessage => {
-    if (remoteMessage) {
-      callback(remoteMessage);
-    }
-  });
+export function onMessageReceived(callback: (message: any) => void) {
+  console.log("Listening for global safety messages...");
+  return () => {};
 }

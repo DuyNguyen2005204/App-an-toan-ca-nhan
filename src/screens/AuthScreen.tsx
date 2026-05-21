@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { signInWithEmail, signUpWithEmail } from '../firebase/firebase';
+// TÍCH HỢP ROUTER ĐỂ ĐIỀU HƯỚNG TRANG CHỦ ĐỘNG
+import { useRouter } from 'expo-router';
 
 const AuthScreen = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,6 +21,9 @@ const AuthScreen = () => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Khởi tạo router điều hướng
+  const router = useRouter();
 
   const handleSubmit = async () => {
     setError(null);
@@ -29,6 +34,11 @@ const AuthScreen = () => {
       } else {
         await signInWithEmail(email, password);
       }
+      
+      // KHI THÀNH CÔNG: Điều hướng người dùng thẳng vào hệ thống Tab chính ((tabs))
+      // Lệnh replace giúp chặn không cho người dùng bấm nút back quay lại màn hình Login
+      router.replace('/(tabs)');
+      
     } catch (err: any) {
       setError(err.message || 'Lỗi xác thực.');
     } finally {
@@ -43,15 +53,17 @@ const AuthScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Text style={styles.title}>{isSignUp ? 'Đăng ký tài khoản' : 'Đăng nhập'}</Text>
+        
         {isSignUp && (
           <TextInput
             style={styles.input}
             placeholder="Họ và tên"
             value={fullName}
             onChangeText={setFullName}
-            autoCapitalize="words"
+            placeholderTextColor="#9ca3af"
           />
         )}
+
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -59,14 +71,18 @@ const AuthScreen = () => {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          placeholderTextColor="#9ca3af"
         />
+
         <TextInput
           style={styles.input}
-          placeholder="Mật khẩu"
+          placeholder="Mật khẩu (Từ 6 ký tự)"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          placeholderTextColor="#9ca3af"
         />
+
         {isSignUp && (
           <TextInput
             style={styles.input}
@@ -74,12 +90,16 @@ const AuthScreen = () => {
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
+            placeholderTextColor="#9ca3af"
           />
         )}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
           <Text style={styles.buttonText}>{isSignUp ? 'Đăng ký' : 'Đăng nhập'}</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.switchButton}
           onPress={() => {
@@ -105,12 +125,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 24,
     textAlign: 'center',
+    color: '#1e293b',
   },
   input: {
     backgroundColor: '#ffffff',
@@ -120,6 +144,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     borderColor: '#d1d5db',
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  errorText: {
+    color: '#dc2626',
+    marginBottom: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 14,
   },
   button: {
     backgroundColor: '#2563eb',
@@ -131,21 +164,17 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   switchButton: {
-    marginTop: 16,
+    marginTop: 20,
     alignItems: 'center',
   },
   switchText: {
     color: '#2563eb',
-    fontSize: 14,
-  },
-  errorText: {
-    color: '#b91c1c',
-    marginBottom: 12,
-    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
-
+// Cuối file bạn export default:
 export default AuthScreen;

@@ -1,22 +1,28 @@
-import { StyleSheet, TouchableOpacity, Text, View, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../src/services/firebaseConfig';
+import HomeScreenComponent from '../../src/screens/HomeScreen';
+import { View, ActivityIndicator } from 'react-native';
 
-export default function HomeScreen() {
-  const handleSOS = () => {
-    Alert.alert("KHẨN CẤP", "Vị trí của bạn đang được gửi tới người thân!");
-    // Sau này sẽ gọi hàm getCurrentLocation() và lưu vào Firestore ở đây
-  };
+export default function TabsIndexPage() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.sosButton} onPress={handleSOS}>
-        <Text style={styles.buttonText}>SOS</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#eef2ff' }}>
+        <ActivityIndicator size="large" color="#dc2626" />
+      </View>
+    );
+  }
+
+  return <HomeScreenComponent user={currentUser} />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  sosButton: { width: 200, height: 200, borderRadius: 100, backgroundColor: 'red', justifyContent: 'center', alignItems: 'center', elevation: 10 },
-  buttonText: { color: 'white', fontSize: 40, fontWeight: 'bold' }
-});

@@ -27,8 +27,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
