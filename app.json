@@ -1,5 +1,6 @@
 {
   "expo": {
+    "sdkVersion": "54.0.0",
     "name": "App-an-toan-ca-nhan",
     "slug": "App-an-toan-ca-nhan",
     "version": "1.0.0",

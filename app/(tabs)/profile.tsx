@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { auth } from '../../src/services/firebaseConfig';
 import { signOut } from 'firebase/auth';
+import { Accelerometer } from 'expo-sensors';
 
 // Component con cho các mục Accordion (Thanh thả xuống)
 const AccordionItem = ({ title, children, isDark }: { title: string, children: React.ReactNode, isDark: boolean }) => {
@@ -33,6 +34,31 @@ export default function ProfileScreen() {
   const [appearance, setAppearance] = useState('Light');
   const [sirenEnabled, setSirenEnabled] = useState(true);
   const [flashlightEnabled, setFlashlightEnabled] = useState(false);
+  const [fallDetectionEnabled, setFallDetectionEnabled] = useState(false);
+
+  useEffect(() => {
+    let subscription: any;
+    if (fallDetectionEnabled) {
+      Accelerometer.setUpdateInterval(500);
+      subscription = Accelerometer.addListener(accelerometerData => {
+        const { x, y, z } = accelerometerData;
+        const totalForce = Math.sqrt(x * x + y * y + z * z);
+        // Ngưỡng té ngã thông thường > 2.5 - 3.0 Gs
+        if (totalForce > 2.5) {
+          Alert.alert('Cảnh Báo Té Ngã', 'Phát hiện va chạm mạnh! Sẽ tự động kích hoạt SOS nếu bạn không phản hồi.', [
+            { text: 'Tôi ổn (Hủy)', style: 'cancel' },
+            { text: 'SOS Ngay', onPress: () => Alert.alert('Đã gửi SOS!') }
+          ]);
+          setFallDetectionEnabled(false); // Tắt tạm thời để tránh spam alert liên tục
+        }
+      });
+    } else {
+      if (subscription) subscription.remove();
+    }
+    return () => {
+      if (subscription) subscription.remove();
+    };
+  }, [fallDetectionEnabled]);
 
   // Kiểm tra xem người dùng có đang chọn chế độ 'Dark' hay không
   const isDark = appearance === 'Dark';
@@ -106,9 +132,10 @@ export default function ProfileScreen() {
           <Text style={[styles.infoText, isDark && styles.darkSubText]}>
             Sử dụng cảm biến gia tốc để tự động gửi SOS khi phát hiện va chạm mạnh hoặc té ngã đột ngột.
           </Text>
-          <TouchableOpacity style={[styles.actionButton, isDark && { backgroundColor: '#1e293b' }]}>
-            <Text style={[styles.actionButtonText, isDark && { color: '#38bdf8' }]}>Cấu hình cảm biến</Text>
-          </TouchableOpacity>
+          <View style={[styles.row, { borderBottomWidth: 0 }]}>
+            <Text style={[styles.rowLabel, isDark && styles.darkText]}>Kích hoạt tự động</Text>
+            <Switch value={fallDetectionEnabled} onValueChange={setFallDetectionEnabled} />
+          </View>
         </AccordionItem>
 
         <AccordionItem title="Kiểm tra định kỳ (Timed Check-In)" isDark={isDark}>

@@ -1,9 +1,47 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, Alert } from 'react-native';
+import { Audio } from 'expo-av';
 
 export default function FeatureScreen() {
   const [isFakeCallVisible, setIsFakeCallVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+
+  async function startRecording() {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Lỗi', 'Cần cấp quyền Microphone để ghi âm.');
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Lỗi khi bắt đầu ghi âm', err);
+    }
+  }
+
+  async function stopRecording() {
+    if (!recording) return;
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log('Ghi âm hoàn tất, file lưu tại:', uri);
+      Alert.alert('Ghi âm hoàn tất', `File đã lưu tạm tại: ${uri}`);
+      // TODO: Thêm logic upload file uri này lên Firebase Storage ở đây
+    } catch (err) {
+      console.error('Lỗi khi dừng ghi âm', err);
+    }
+    setRecording(null);
+    setIsRecording(false);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -22,7 +60,7 @@ export default function FeatureScreen() {
       {/* NÚT BẤM 2: GHI ÂM KHẨN CẤP */}
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: isRecording ? '#dc2626' : '#16a34a' }]} 
-        onPress={() => setIsRecording(!isRecording)}
+        onPress={isRecording ? stopRecording : startRecording}
       >
         <Text style={styles.cardTitle}>
           {isRecording ? '🛑 Đang Ghi Âm Khẩn Cấp...' : '🎙️ Bật Ghi Âm Môi Trường'}

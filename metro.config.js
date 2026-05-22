@@ -14,4 +14,10 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
+// 3. Sửa lỗi Firebase "Component auth has not been registered yet" trên bản Expo mới
+if (!config.resolver.sourceExts.includes('cjs')) {
+  config.resolver.sourceExts.push('cjs');
+}
+config.resolver.unstable_enablePackageExports = false;
+
 module.exports = config;

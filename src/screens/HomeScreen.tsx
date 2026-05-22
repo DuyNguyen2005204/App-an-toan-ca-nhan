@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
+import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { db } from '../../src/services/firebaseConfig';
+import * as Location from 'expo-location';
+import * as SMS from 'expo-sms';
 
 interface Contact {
   name: string;
@@ -8,24 +12,73 @@ interface Contact {
 }
 
 export default function HomeScreenComponent({ user }: { user: any }) {
-  const [contacts, setContacts] = useState<Contact[]>([
-    { name: 'Duy', phone: '0357225751', note: 'Bố mẹ' }
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const contactsRef = collection(db, 'users', user.uid, 'contacts');
+    const unsubscribe = onSnapshot(contactsRef, (snapshot) => {
+      const fetchedContacts = snapshot.docs.map(doc => doc.data() as Contact);
+      setContacts(fetchedContacts);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
   const [status, setStatus] = useState('Hệ thống hoạt động ổn định');
 
-  const handleAddContact = () => {
+  const handleAddContact = async () => {
     if (!name || !phone) return;
-    setContacts([...contacts, { name, phone, note }]);
-    setName('');
-    setPhone('');
-    setNote('');
+    if (!user?.uid) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập để lưu danh bạ.');
+      return;
+    }
+    try {
+      const contactsRef = collection(db, 'users', user.uid, 'contacts');
+      await addDoc(contactsRef, { name, phone, note });
+      setName('');
+      setPhone('');
+      setNote('');
+      Alert.alert('Thành công', 'Đã lưu liên hệ khẩn cấp.');
+    } catch (error) {
+      Alert.alert('Lỗi', 'Không thể lưu liên hệ.');
+    }
   };
 
-  const handleSendSOS = () => {
-    setStatus('🔴 Đã phát tín hiệu khẩn cấp & gửi GPS!');
+  const handleSendSOS = async () => {
+    setStatus('Đang lấy vị trí GPS...');
+    let { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+    if (locationStatus !== 'granted') {
+      setStatus('Cảnh báo: Không có quyền truy cập Vị trí!');
+      Alert.alert('Lỗi', 'Cần cấp quyền vị trí để gửi tọa độ.');
+      return;
+    }
+
+    try {
+      let location = await Location.getCurrentPositionAsync({});
+      const gpsLink = `https://www.google.com/maps/search/?api=1&query=${location.coords.latitude},${location.coords.longitude}`;
+      const message = `SOS! TÔI ĐANG GẶP NGUY HIỂM. Hãy đến giúp tôi tại: ${gpsLink}`;
+      
+      const phoneNumbers = contacts.map(c => c.phone);
+      if (phoneNumbers.length === 0) {
+        Alert.alert('Thiếu thông tin', 'Vui lòng thêm ít nhất 1 số điện thoại liên hệ khẩn cấp trước khi gửi SOS.');
+        setStatus('Hệ thống hoạt động ổn định');
+        return;
+      }
+
+      const isAvailable = await SMS.isAvailableAsync();
+      if (isAvailable) {
+        await SMS.sendSMSAsync(phoneNumbers, message);
+        setStatus('🔴 Đã phát tín hiệu khẩn cấp & gửi GPS!');
+      } else {
+        Alert.alert('Lỗi', 'Thiết bị này không hỗ trợ gửi tin nhắn SMS.');
+        setStatus('Lỗi: Thiết bị không hỗ trợ SMS');
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus('Lỗi khi lấy vị trí');
+    }
   };
 
   return (
