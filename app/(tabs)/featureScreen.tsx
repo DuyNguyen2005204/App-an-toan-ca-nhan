@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { Audio } from 'expo-av';
+import FakeCallModal, { CallerInfo } from '../../src/components/FakeCallModal';
+
+// Thông tin cơ quan chức năng mặc định cho tab Mở Rộng
+const DEFAULT_CALLER: CallerInfo = {
+  name: 'Đội Cứu Hộ Khẩn Cấp',
+  subtitle: 'Lực lượng Phản ứng Nhanh 113',
+  emoji: '🚨',
+  color: '#dc2626',
+};
 
 export default function FeatureScreen() {
-  const [isFakeCallVisible, setIsFakeCallVisible] = useState(false);
+  const [fakeCallVisible, setFakeCallVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
 
@@ -48,13 +57,13 @@ export default function FeatureScreen() {
       <Text style={styles.title}>Tính Năng Mở Rộng</Text>
       <Text style={styles.subtitle}>Bảo vệ bạn trong mọi tình huống khẩn cấp</Text>
 
-      {/* NÚT BẤM 1: FAKE CALL */}
+      {/* NÚT BẤM 1: FAKE CALL (dùng FakeCallModal dùng chung) */}
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: '#2563eb' }]} 
-        onPress={() => setIsFakeCallVisible(true)}
+        onPress={() => setFakeCallVisible(true)}
       >
         <Text style={styles.cardTitle}>📞 Kích Hoạt Fake Call</Text>
-        <Text style={styles.cardDesc}>Tạo cuộc gọi giả lập lập tức để thoát khỏi đám đông hoặc tình huống khó xử.</Text>
+        <Text style={styles.cardDesc}>Tạo cuộc gọi giả lập tức thì từ đội cứu hộ để thoát khỏi tình huống khó xử.</Text>
       </TouchableOpacity>
 
       {/* NÚT BẤM 2: GHI ÂM KHẨN CẤP */}
@@ -72,28 +81,12 @@ export default function FeatureScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* --- GIAO DIỆN MÀN HÌNH CUỘC GỌI GIẢ LẬP TRÀN MÀN HÌNH (MODAL FAKE CALL) --- */}
-      <Modal visible={isFakeCallVisible} animationType="slide" transparent={false}>
-        <View style={styles.callContainer}>
-          <View style={styles.callHeader}>
-            <Text style={styles.callerIncoming}>CUỘC GỌI ĐẾN</Text>
-            <Text style={styles.callerName}>Đội Cứu Hộ Khẩn Cấp 🚨</Text>
-            <Text style={styles.callStatus}>Đang gọi...</Text>
-          </View>
-
-          <View style={styles.callActionRow}>
-            {/* Nút từ chối cuộc gọi */}
-            <TouchableOpacity style={[styles.callButton, { backgroundColor: '#dc2626' }]} onPress={() => setIsFakeCallVisible(false)}>
-              <Text style={styles.callButtonText}>Từ chối</Text>
-            </TouchableOpacity>
-
-            {/* Nút chấp nhận cuộc gọi */}
-            <TouchableOpacity style={[styles.callButton, { backgroundColor: '#16a34a' }]} onPress={() => alert('Đã kết nối cuộc gọi cứu hộ giả lập!')}>
-              <Text style={styles.callButtonText}>Chấp nhận</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* MODAL CUỘC GỌI GIẢ LẬP DÙNG CHUNG */}
+      <FakeCallModal
+        visible={fakeCallVisible}
+        caller={DEFAULT_CALLER}
+        onClose={() => setFakeCallVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -105,13 +98,4 @@ const styles = StyleSheet.create({
   card: { padding: 20, borderRadius: 12, marginBottom: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   cardTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 8 },
   cardDesc: { fontSize: 13, color: '#f1f5f9', lineHeight: 18 },
-  // Định dạng cuộc gọi giả
-  callContainer: { flex: 1, backgroundColor: '#0f172a', justifyContent: 'space-between', paddingVertical: 80, alignItems: 'center' },
-  callHeader: { alignItems: 'center', marginTop: 40 },
-  callerIncoming: { color: '#94a3b8', fontSize: 14, letterSpacing: 2, marginBottom: 10, fontWeight: '600' },
-  callerName: { color: '#ffffff', fontSize: 28, fontWeight: '700', marginBottom: 5 },
-  callStatus: { color: '#22c55e', fontSize: 16 },
-  callActionRow: { flexDirection: 'row', width: '80%', justifyContent: 'space-around' },
-  callButton: { width: 100, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-  callButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 }
 });

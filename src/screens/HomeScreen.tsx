@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Alert, Modal } from 'react-native';
 import { collection, onSnapshot, addDoc } from 'firebase/firestore';
 import { db } from '../../src/services/firebaseConfig';
 import * as Location from 'expo-location';
 import * as SMS from 'expo-sms';
+import { useRouter } from 'expo-router';
+import FakeCallModal, { CallerInfo } from '../components/FakeCallModal';
+
 
 interface Contact {
   name: string;
@@ -11,8 +14,35 @@ interface Contact {
   note: string;
 }
 
+// Thông tin 3 cơ quan chức năng hỗ trợ giả lập cuộc gọi
+const AGENCIES: CallerInfo[] = [
+  { name: 'Cảnh Sát 113', subtitle: 'Công An Nhân Dân', emoji: '🚨', color: '#dc2626' },
+  { name: 'Phòng Cháy Chữa Cháy 114', subtitle: 'Cứu Hỏa Khẩn Cấp', emoji: '🚒', color: '#ea580c' },
+  { name: 'Cấp Cứu 115', subtitle: 'Trung Tâm Y Tế Khẩn Cấp', emoji: '🏥', color: '#16a34a' },
+];
+
 export default function HomeScreenComponent({ user }: { user: any }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const router = useRouter(); // Khởi tạo router
+
+  // State cho tính năng cuộc gọi giả lập cơ quan chức năng
+  const [agencyMenuVisible, setAgencyMenuVisible] = useState(false);
+  const [fakeCallVisible, setFakeCallVisible] = useState(false);
+  const [selectedCaller, setSelectedCaller] = useState<CallerInfo>(AGENCIES[0]);
+
+  // Mở menu chọn cơ quan chức năng khi nhấn Hotline
+  const handleHotlinePress = () => {
+    setAgencyMenuVisible(true);
+  };
+
+  // Chọn cơ quan và khởi động cuộc gọi giả lập
+  const handleSelectAgency = (agency: CallerInfo) => {
+    setSelectedCaller(agency);
+    setAgencyMenuVisible(false);
+    // Delay nhỏ để tránh animation chồng chéo giữa 2 Modal
+    setTimeout(() => setFakeCallVisible(true), 300);
+  };
+
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -149,7 +179,7 @@ export default function HomeScreenComponent({ user }: { user: any }) {
           <TouchableOpacity 
             style={[styles.gridItem, { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' }]}
             activeOpacity={0.8}
-            onPress={() => alert('Đang tải cẩm nang sơ cứu chấn thương...')}
+            onPress={() => router.push('/medicalHandbook')}
           >
             <View style={[styles.iconCircle, { backgroundColor: '#10b981' }]}>
               <Text style={styles.gridIcon}>🏥</Text>
@@ -158,17 +188,17 @@ export default function HomeScreenComponent({ user }: { user: any }) {
             <Text style={styles.gridDesc}>Xem nhanh các bước sơ cứu tai nạn tại chỗ</Text>
           </TouchableOpacity>
 
-          {/* Ô VUÔNG 4: ĐƯỜNG DÂY NÓNG CHÍNH PHỦ */}
+          {/* Ô VUÔNG 4: GỌI GIẢ LẬP CƠ QUAN CHỨC NĂNG */}
           <TouchableOpacity 
             style={[styles.gridItem, { backgroundColor: '#fff7ed', borderColor: '#ffedd5' }]}
             activeOpacity={0.8}
-            onPress={() => alert('Tổng đài Công an: 113 | Cứu hỏa: 114 | Cứu thương: 115')}
+            onPress={handleHotlinePress}
           >
             <View style={[styles.iconCircle, { backgroundColor: '#f97316' }]}>
               <Text style={styles.gridIcon}>📞</Text>
             </View>
-            <Text style={[styles.gridTitle, { color: '#9a3412' }]}>Hotline 113/115</Text>
-            <Text style={styles.gridDesc}>Danh sách đường dây nóng cơ quan chức năng</Text>
+            <Text style={[styles.gridTitle, { color: '#9a3412' }]}>Gọi 113 / 114 / 115</Text>
+            <Text style={styles.gridDesc}>Giả lập cuộc gọi khẩn cấp từ cơ quan chức năng</Text>
           </TouchableOpacity>
 
         </View>
@@ -206,6 +236,63 @@ export default function HomeScreenComponent({ user }: { user: any }) {
         </View>
 
       </ScrollView>
+
+      {/* ============================================================
+          MODAL CHỌN CƠ QUAN CHỨC NĂNG (HIỆN KHI NHẤN NÚT GỌI)
+          ============================================================ */}
+      <Modal
+        visible={agencyMenuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAgencyMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setAgencyMenuVisible(false)}
+        >
+          <View style={styles.menuCard}>
+            <Text style={styles.menuTitle}>📞 Chọn cơ quan để gọi giả lập</Text>
+            <Text style={styles.menuSubtitle}>Cuộc gọi này chỉ là giả lập để đánh lạc hướng kẻ xấu</Text>
+            <View style={styles.menuDivider} />
+
+            {AGENCIES.map((agency, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.agencyRow}
+                onPress={() => handleSelectAgency(agency)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.agencyIconBox, { backgroundColor: agency.color + '20' }]}>
+                  <Text style={styles.agencyEmoji}>{agency.emoji}</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={styles.agencyName}>{agency.name}</Text>
+                  <Text style={styles.agencySubtitle}>{agency.subtitle}</Text>
+                </View>
+                <Text style={{ color: '#94a3b8', fontSize: 18 }}>›</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={styles.menuCancelBtn}
+              onPress={() => setAgencyMenuVisible(false)}
+            >
+              <Text style={styles.menuCancelText}>Huỷ bỏ</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ============================================================
+          MODAL CUỘC GỌI GIẢ LẬP TRÀN MÀN HÌNH
+          ============================================================ */}
+      <FakeCallModal
+        visible={fakeCallVisible}
+        caller={selectedCaller}
+        onClose={() => setFakeCallVisible(false)}
+      />
+
     </SafeAreaView>
   );
 }
@@ -415,5 +502,83 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+
+  // ==========================================
+  // STYLES CHO MODAL CHỌN CƠ QUAN CHỨC NĂNG
+  // ==========================================
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  menuCard: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  menuTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  menuSubtitle: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginBottom: 8,
+  },
+  agencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  agencyIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  agencyEmoji: {
+    fontSize: 22,
+  },
+  agencyName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  agencySubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  menuCancelBtn: {
+    marginTop: 16,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  menuCancelText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#475569',
   },
 });

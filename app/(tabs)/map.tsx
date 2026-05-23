@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { MapScreen } from '../../src/screens/MapScreen';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../src/services/firebaseConfig';
 
 export default function MapPage() {
   const [dangerZones, setDangerZones] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchDangerZones = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'dangerZones'));
-        const zones = querySnapshot.docs.map(doc => ({
+    // Sử dụng onSnapshot để cập nhật bản đồ thời gian thực (Real-time)
+    const unsubscribe = onSnapshot(
+      collection(db, 'dangerZones'),
+      (snapshot) => {
+        const zones = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setDangerZones(zones);
-      } catch (error) {
-        console.error("Lỗi khi tải điểm đen: ", error);
+      },
+      (error) => {
+        console.error("Lỗi khi tải điểm đen thời gian thực: ", error);
       }
-    };
+    );
     
-    fetchDangerZones();
+    return () => unsubscribe();
   }, []);
 
   return <MapScreen dangerZones={dangerZones} />;
